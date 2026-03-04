@@ -1,6 +1,6 @@
 # ⛓️ SkillChain — Decentralized AI-Driven Skill Verification for Hiring
 
-> *Built for ORIGIN Hackathon · Team Clashers · SIMATS Engineering*
+> *Built for ORIGIN Hackathon · Team Clashers · Easwari Engineering*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Prototype-magenta.svg)]()
@@ -165,7 +165,7 @@ cd blockchain && npx hardhat compile
 | Niranjan S | Backend · AI/ML |
 | Jitendar S | Blockchain · Smart Contracts |
 
-**Institution:** SIMATS Engineering
+**Institution:** Easwari Engineering
 **Hackathon:** ORIGIN — Place to Start
 
 ---
