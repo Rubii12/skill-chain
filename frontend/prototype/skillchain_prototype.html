@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillChain — Decentralized AI Skill Verification</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Rajdhani:wght@300;400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050508;
+      --surface: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.07);
+      --cyan: #00e5ff;
+      --cyan-dim: rgba(0, 229, 255, 0.15);
+      --cyan-glow: rgba(0, 229, 255, 0.4);
+      --magenta: #c0006e;
+      --magenta-dim: rgba(192, 0, 110, 0.2);
+      --white: #f0f4ff;
+      --muted: rgba(240, 244, 255, 0.4);
+      --verified: #00ff88;
+      --warning: #ffaa00;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* STARFIELD */
+    #stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 80%, rgba(192, 0, 110, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(0, 229, 255, 0.06) 0%, transparent 50%),
+        #050508;
+    }
+
+    #stars::before,
+    #stars::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 15%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 25% 40%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 50% 10%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 60%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 35% 75%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 60% 85%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 90%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 15% 55%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 42% 22%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 78% 45%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 5% 90%, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+    }
+
+    /* LAYOUT */
+    #app {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      background: rgba(5, 5, 8, 0.7);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.3rem;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .logo span {
+      color: var(--white);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .nav-tab {
+      padding: 8px 20px;
+      background: none;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 2px;
+    }
+
+    .nav-tab:hover {
+      color: var(--white);
+      border-color: var(--border);
+    }
+
+    .nav-tab.active {
+      color: var(--cyan);
+      border-color: var(--cyan-dim);
+      background: var(--cyan-dim);
+    }
+
+    .nav-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--verified);
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--verified);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 0 6px rgba(0, 255, 136, 0);
+      }
+    }
+
+    /* VIEWS */
+    .view {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* =================== LANDING =================== */
+    #landing {
+      padding: 80px 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0.8;
+    }
+
+    .hero-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      text-shadow: 0 0 60px rgba(0, 229, 255, 0.3);
+    }
+
+    .hero-title em {
+      font-style: normal;
+      color: var(--cyan);
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      padding: 14px 36px;
+      background: var(--cyan);
+      color: #000;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      border: none;
+      cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--white);
+      box-shadow: 0 0 30px var(--cyan-glow);
+    }
+
+    .btn-secondary {
+      padding: 14px 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin: 80px auto;
+      max-width: 700px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .stat {
+      background: var(--bg);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--cyan);
+      text-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 6px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin: 0 auto;
+      max-width: 1100px;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      padding: 36px 32px;
+      transition: background 0.3s;
+    }
+
+    .feature-card:hover {
+      background: rgba(0, 229, 255, 0.03);
+    }
+
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    /* =================== STUDENT DASHBOARD =================== */
+    #student {
+      padding: 40px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      margin-bottom: 32px;
+    }
+
+    .section-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--cyan);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px 32px;
+      margin-bottom: 32px;
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+    }
+
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--magenta), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .profile-info h2 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .profile-info p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .profile-badges {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 4px 12px;
+      border: 1px solid;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge.verified {
+      border-color: var(--verified);
+      color: var(--verified);
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .badge.sbt {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+
+    /* GITHUB CONNECT */
+    .github-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .github-panel h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--white);
+    }
+
+    .github-input-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .gh-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--white);
+      padding: 12px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .gh-input:focus {
+      border-color: var(--cyan);
+    }
+
+    .gh-input::placeholder {
+      color: var(--muted);
+    }
+
+    .btn-analyze {
+      padding: 12px 28px;
+      background: var(--cyan);
+      color: #000;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-analyze:hover {
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .btn-analyze:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .repo-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .repo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .repo-item:hover,
+    .repo-item.selected {
+      border-color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+
+    .repo-name {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .repo-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .repo-lang {
+      padding: 2px 8px;
+      background: var(--magenta-dim);
+      border: 1px solid rgba(192, 0, 110, 0.3);
+      font-size: 0.65rem;
+      font-family: 'Space Mono', monospace;
+      color: #ff6ec7;
+    }
+
+    /* ANALYSIS PROGRESS */
+    .analysis-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .analysis-panel.visible {
+      display: block;
+    }
+
+    .progress-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .step-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      transition: all 0.5s;
+    }
+
+    .step-icon.done {
+      background: var(--verified);
+      border-color: var(--verified);
+      color: #000;
+    }
+
+    .step-icon.running {
+      background: var(--cyan-dim);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .step-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .step-label.done {
+      color: var(--verified);
+    }
+
+    .step-label.running {
+      color: var(--cyan);
+    }
+
+    .step-label.pending {
+      color: var(--muted);
+    }
+
+    /* HEATMAP */
+    .heatmap-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .heatmap-panel.visible {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .skill-bar-wrap {
+      margin-bottom: 8px;
+    }
+
+    .skill-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .skill-score {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--cyan);
+    }
+
+    .skill-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skill-fill {
+      height: 100%;
+      border-radius: 0;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .skill-fill::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .blockchain-anchor {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0, 255, 136, 0.04);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+    }
+
+    .tx-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tx-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .tx-hash {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--verified);
+      word-break: break-all;
+    }
+
+    /* SCORE RING */
+    .score-display {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      margin: 20px 0;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+
+    .score-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .score-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', monospace;
+    }
+
+    .score-big {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--cyan);
+      line-height: 1;
+    }
+
+    .score-small {
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* =================== RECRUITER DASHBOARD =================== */
+    #recruiter {
+      padding: 40px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--white);
+      padding: 10px 16px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      border-color: var(--cyan);
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .talent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .talent-card {
+      background: var(--bg);
+      padding: 28px;
+      transition: background 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .talent-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 0;
+      background: var(--cyan);
+      transition: height 0.3s;
+    }
+
+    .talent-card:hover {
+      background: rgba(0, 229, 255, 0.02);
+    }
+
+    .talent-card:hover::before {
+      height: 100%;
+    }
+
+    .talent-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .t-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .t-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .t-role {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .t-score-badge {
+      margin-left: auto;
+      text-align: center;
+      font-family: 'Orbitron', monospace;
+    }
+
+    .t-score-num {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--cyan);
+      line-height: 1;
+    }
+
+    .t-score-lbl {
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .t-skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .t-skill-tag {
+      padding: 3px 10px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      transition: all 0.2s;
+    }
+
+    .t-skill-tag.top {
+      border-color: rgba(0, 229, 255, 0.3);
+      color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+
+    .t-chain-info {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-top: 4px;
+    }
+
+    .chain-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--verified);
+      flex-shrink: 0;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(5, 5, 8, 0.9);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      color: var(--white);
+    }
+
+    /* VERIFICATION VIEW */
+    #verify {
+      padding: 40px 48px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .verify-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .verify-input-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .verify-result {
+      display: none;
+      margin-top: 24px;
+      background: rgba(0, 255, 136, 0.04);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      padding: 24px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .verify-result.visible {
+      display: block;
+    }
+
+    .verify-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .verify-row:last-child {
+      border-bottom: none;
+    }
+
+    .verify-key {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .verify-val {
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .verify-val.ok {
+      color: var(--verified);
+    }
+
+    /* NOTIFICATIONS */
+    .notif {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 14px 20px;
+      max-width: 320px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+    }
+
+    .notif.show {
+      transform: translateX(0);
+    }
+
+    .notif.cyan {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .notif.green {
+      border-color: var(--verified);
+      color: var(--verified);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 700px) {
+      nav {
+        padding: 16px 20px;
+      }
+
+      .logo {
+        font-size: 1rem;
+      }
+
+      #landing,
+      #student,
+      #recruiter,
+      #verify {
+        padding: 32px 20px;
+      }
+
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+
+      .profile-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .profile-badges {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="stars"></div>
+
+  <div id="app">
+    <nav>
+      <div class="logo">SKILL<span>CHAIN</span></div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showView('landing')">HOME</button>
+        <button class="nav-tab" onclick="showView('student')">STUDENT</button>
+        <button class="nav-tab" onclick="showView('recruiter')">RECRUITER</button>
+        <button class="nav-tab" onclick="showView('verify')">VERIFY</button>
+      </div>
+      <div class="nav-badge">
+        <div class="pulse"></div>
+        CHAIN LIVE
+      </div>
+    </nav>
+
+    <!-- ========== LANDING ========== -->
+    <div id="landing" class="view active">
+      <div style="padding: 80px 48px; text-align: center;">
+        <div class="hero-eyebrow">Decentralized AI-Driven Skill Verification</div>
+        <h1 class="hero-title">PROVE YOUR<br><em>SKILLS.</em><br>NOT YOUR RESUME.</h1>
+        <p class="hero-sub">SkillChain replaces credential fraud with blockchain-anchored, AI-verified proof of work.
+          Every skill score is immutable, tamper-proof, and instantly auditable by any recruiter on Earth.</p>
+        <div class="hero-ctas">
+          <button class="btn-primary" onclick="showView('student')">VERIFY MY SKILLS</button>
+          <button class="btn-secondary" onclick="showView('recruiter')">FIND TALENT</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-num" id="c1">0</div>
+            <div class="stat-label">Skills Verified</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="c2">0</div>
+            <div class="stat-label">SBTs Minted</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="c3">0</div>
+            <div class="stat-label">Recruiters</div>
+          </div>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🔬</div>
+            <div class="feature-title">AI Code Audit</div>
+            <div class="feature-desc">FastAPI + Python AST analyzes GitHub repos for logic complexity, pattern depth,
+              and human authorship.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⛓️</div>
+            <div class="feature-title">Soulbound Tokens</div>
+            <div class="feature-desc">Verified skill scores are minted as non-transferable SBTs on-chain. Permanent.
+              Immutable. Yours.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <div class="feature-title">Live Skill Heatmaps</div>
+            <div class="feature-desc">Replace your PDF resume with a real-time visualization of actual coding
+              proficiency across stacks.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">AI Detection Guard</div>
+            <div class="feature-desc">AST stylometry detects AI-generated code patterns, ensuring only authentic human
+              work gets verified.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STUDENT DASHBOARD ========== -->
+    <div id="student" class="view">
+      <div class="section-header">
+        <div class="section-eyebrow">// STUDENT PORTAL</div>
+        <h2 class="section-title">YOUR SKILL PROFILE</h2>
+      </div>
+
+      <div class="profile-card">
+        <div class="avatar">RA</div>
+        <div class="profile-info">
+          <h2>RUBIKA A</h2>
+          <p>rubika-a · Easwari Engineering · Connected via GitHub OAuth</p>
+        </div>
+        <div class="profile-badges">
+          <div class="badge verified">✓ VERIFIED</div>
+          <div class="badge sbt">3 SBTs</div>
+        </div>
+      </div>
+
+      <!-- GitHub Repo Selection -->
+      <div class="github-panel">
+        <h3>⬡ CONNECT GITHUB REPOSITORY</h3>
+        <div class="github-input-row">
+          <input class="gh-input" id="repoInput" placeholder="github.com/rubika-a/your-repo"
+            value="github.com/rubika-a/mern-ecommerce" />
+          <button class="btn-analyze" id="analyzeBtn" onclick="startAnalysis()">ANALYZE REPO</button>
+        </div>
+        <div class="repo-list" id="repoList">
+          <div class="repo-item selected" onclick="selectRepo(this, 'mern-ecommerce', 'JavaScript')">
+            <span class="repo-name">mern-ecommerce</span>
+            <span class="repo-meta">Last updated 2d ago &nbsp;•&nbsp; 142 commits</span>
+            <span class="repo-lang">JavaScript</span>
+          </div>
+          <div class="repo-item" onclick="selectRepo(this, 'fastapi-ml-service', 'Python')">
+            <span class="repo-name">fastapi-ml-service</span>
+            <span class="repo-meta">Last updated 5d ago &nbsp;•&nbsp; 89 commits</span>
+            <span class="repo-lang">Python</span>
+          </div>
+          <div class="repo-item" onclick="selectRepo(this, 'blockchain-voting-dapp', 'Solidity')">
+            <span class="repo-name">blockchain-voting-dapp</span>
+            <span class="repo-meta">Last updated 1w ago &nbsp;•&nbsp; 67 commits</span>
+            <span class="repo-lang">Solidity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Progress -->
+      <div class="analysis-panel" id="analysisPanel">
+        <h3
+          style="font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:4px;color:var(--cyan)">
+          ⬡ AI ANALYSIS IN PROGRESS</h3>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Processing: <span id="repoName"
+            style="color:var(--white);font-family:'Space Mono',monospace;"></span></p>
+        <div class="progress-steps" id="progressSteps">
+          <div class="step-row">
+            <div class="step-icon" id="s1">◌</div><span class="step-label pending" id="sl1">Cloning repository via
+              GitHub API</span>
+          </div>
+          <div class="step-row">
+            <div class="step-icon" id="s2">◌</div><span class="step-label pending" id="sl2">Parsing Abstract Syntax Tree
+              (AST)</span>
+          </div>
+          <div class="step-row">
+            <div class="step-icon" id="s3">◌</div><span class="step-label pending" id="sl3">Measuring logic complexity &
+              pattern depth</span>
+          </div>
+          <div class="step-row">
+            <div class="step-icon" id="s4">◌</div><span class="step-label pending" id="sl4">Running AI-generated code
+              detection</span>
+          </div>
+          <div class="step-row">
+            <div class="step-icon" id="s5">◌</div><span class="step-label pending" id="sl5">Anchoring Skill Score to
+              blockchain (Solidity SBT)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skill Heatmap Results -->
+      <div class="heatmap-panel" id="heatmapPanel">
+        <h3
+          style="font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:16px;color:var(--white)">
+          ⬡ SKILL HEATMAP — <span id="heatmapRepo" style="color:var(--cyan)"></span></h3>
+
+        <div class="score-display">
+          <div class="score-ring">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" />
+              <circle id="scoreCircle" cx="60" cy="60" r="52" fill="none" stroke="#00e5ff" stroke-width="8"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-linecap="butt"
+                style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); filter: drop-shadow(0 0 8px rgba(0,229,255,0.5));" />
+            </svg>
+            <div class="score-num">
+              <span class="score-big" id="scoreBig">—</span>
+              <span class="score-small">SKILL SCORE</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;font-weight:300;">Composite score across
+              code quality, logic depth, human authenticity, and stack proficiency.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div class="badge verified">✓ HUMAN AUTHORED</div>
+              <div class="badge sbt">SBT MINTED</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="skills-grid" id="skillsGrid"></div>
+
+        <div class="blockchain-anchor" id="blockchainAnchor">
+          <div class="tx-row">
+            <span class="tx-label">TX HASH</span>
+            <span class="tx-hash" id="txHash"></span>
+          </div>
+          <div class="tx-row" style="margin-top:8px;">
+            <span class="tx-label">BLOCK</span>
+            <span class="tx-hash" id="blockNum" style="color:var(--cyan);"></span>
+            <span class="tx-label" style="margin-left:24px;">NETWORK</span>
+            <span class="tx-hash" style="color:var(--cyan);">Ethereum Sepolia Testnet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== RECRUITER DASHBOARD ========== -->
+    <div id="recruiter" class="view">
+      <div class="section-header">
+        <div class="section-eyebrow">// RECRUITER PORTAL</div>
+        <h2 class="section-title">VERIFIED TALENT POOL</h2>
+      </div>
+
+      <div class="filter-bar">
+        <span class="filter-label">FILTER BY</span>
+        <select class="filter-select" onchange="filterTalent(this.value)">
+          <option value="all">All Stacks</option>
+          <option value="mern">MERN</option>
+          <option value="python">Python / FastAPI</option>
+          <option value="java">Java</option>
+          <option value="solidity">Blockchain / Solidity</option>
+        </select>
+        <select class="filter-select" onchange="sortTalent(this.value)">
+          <option value="score">Sort: Skill Score</option>
+          <option value="recent">Sort: Recently Verified</option>
+        </select>
+        <div style="margin-left:auto;font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted);">
+          <span id="talentCount">6</span> verified candidates
+        </div>
+      </div>
+
+      <div class="talent-grid" id="talentGrid"></div>
+    </div>
+
+    <!-- ========== VERIFICATION ========== -->
+    <div id="verify" class="view">
+      <div class="section-header">
+        <div class="section-eyebrow">// VERIFICATION ENGINE</div>
+        <h2 class="section-title">AUDIT A SKILL CLAIM</h2>
+      </div>
+
+      <div class="verify-box">
+        <p style="font-size:0.9rem;color:var(--muted);line-height:1.7;margin-bottom:8px;font-weight:300;">
+          Enter a candidate's Verification Hash to instantly audit their on-chain skill credentials. No middleman. No
+          delay.
+        </p>
+        <div class="verify-input-row">
+          <input class="gh-input" id="verifyHash" placeholder="0x3a7f...c91e (paste verification hash)" />
+          <button class="btn-analyze" onclick="doVerify()">VERIFY</button>
+        </div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;">
+          Try: <span style="color:var(--cyan);cursor:pointer;"
+            onclick="document.getElementById('verifyHash').value='0x3a7f9b2e1d4c8f0a5b6e2d9c1f4a7e3b8d0c5f2a9e1b4d7f0c3a6e9b2d5f8a1'">0x3a7f...demo
+            hash</span>
+        </p>
+
+        <div class="verify-result" id="verifyResult">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div
+              style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#c0006e,#00e5ff);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;">
+              RA</div>
+            <div>
+              <div style="font-family:'Orbitron',monospace;font-weight:700;">RUBIKA A</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-family:'Space Mono',monospace;">rubika-a · SIMATS
+                Engineering</div>
+            </div>
+            <div class="badge verified" style="margin-left:auto;">✓ AUTHENTIC</div>
+          </div>
+          <div class="verify-row"><span class="verify-key">Repository</span><span
+              class="verify-val">mern-ecommerce</span></div>
+          <div class="verify-row"><span class="verify-key">Skill Score</span><span class="verify-val ok">87 / 100</span>
+          </div>
+          <div class="verify-row"><span class="verify-key">Human Authorship</span><span class="verify-val ok">✓
+              CONFIRMED (94.2%)</span></div>
+          <div class="verify-row"><span class="verify-key">AI Detection</span><span class="verify-val ok">✓ PASSED — No
+              LLM Patterns</span></div>
+          <div class="verify-row"><span class="verify-key">Blockchain Anchor</span><span class="verify-val ok">Block
+              #22,041,337</span></div>
+          <div class="verify-row"><span class="verify-key">Timestamp</span><span class="verify-val">2026-03-02 14:22:08
+              UTC</span></div>
+          <div class="verify-row"><span class="verify-key">SBT Token ID</span><span
+              class="verify-val ok">#0x00000047</span></div>
+          <div class="verify-row"><span class="verify-key">Network</span><span class="verify-val">Ethereum Sepolia
+              Testnet</span></div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);padding:28px 32px;">
+        <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:16px;">⬡ HOW
+          VERIFICATION WORKS</h3>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;gap:16px;align-items:flex-start;">
+            <div
+              style="width:28px;height:28px;background:var(--cyan);color:#000;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;font-size:0.8rem;flex-shrink:0;">
+              1</div>
+            <div>
+              <div style="font-weight:700;margin-bottom:4px;">AI Deep Analysis</div>
+              <div style="font-size:0.85rem;color:var(--muted);">FastAPI clones the repo, AST parses every file, scoring
+                logic complexity, design patterns, and human authorship.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-start;">
+            <div
+              style="width:28px;height:28px;background:var(--cyan);color:#000;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;font-size:0.8rem;flex-shrink:0;">
+              2</div>
+            <div>
+              <div style="font-weight:700;margin-bottom:4px;">On-Chain Anchoring</div>
+              <div style="font-size:0.85rem;color:var(--muted);">The skill score hash is submitted to a Solidity smart
+                contract. A Soulbound Token (SBT) is minted — non-transferable and permanent.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-start;">
+            <div
+              style="width:28px;height:28px;background:var(--cyan);color:#000;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;font-size:0.8rem;flex-shrink:0;">
+              3</div>
+            <div>
+              <div style="font-weight:700;margin-bottom:4px;">Instant Audit</div>
+              <div style="font-size:0.85rem;color:var(--muted);">Recruiter pastes the Verification Hash. The system
+                cross-checks the on-chain record in milliseconds — zero trust required.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="talentModal" onclick="closeModal(event)">
+    <div class="modal" style="position:relative;" id="modalContent">
+      <button class="modal-close" onclick="document.getElementById('talentModal').classList.remove('open')">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION -->
+  <div class="notif" id="notif"></div>
+
+  <script>
+    // ---- VIEW SWITCHING ----
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      const tabs = document.querySelectorAll('.nav-tab');
+      const map = { landing: 0, student: 1, recruiter: 2, verify: 3 };
+      tabs[map[id]].classList.add('active');
+    }
+
+    // ---- ANIMATED COUNTERS ----
+    function animateCount(id, target, suffix = '') {
+      let cur = 0; const el = document.getElementById(id);
+      const step = Math.ceil(target / 60);
+      const iv = setInterval(() => {
+        cur = Math.min(cur + step, target);
+        el.textContent = cur.toLocaleString() + suffix;
+        if (cur >= target) clearInterval(iv);
+      }, 20);
+    }
+    setTimeout(() => {
+      animateCount('c1', 1247);
+      animateCount('c2', 892);
+      animateCount('c3', 143);
+    }, 400);
+
+    // ---- REPO SELECTION ----
+    let selectedRepo = 'mern-ecommerce';
+    let selectedLang = 'JavaScript';
+    function selectRepo(el, name, lang) {
+      document.querySelectorAll('.repo-item').forEach(r => r.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedRepo = name; selectedLang = lang;
+      document.getElementById('repoInput').value = 'github.com/rubika-a/' + name;
+    }
+
+    // ---- ANALYSIS SIMULATION ----
+    const repoSkills = {
+      'mern-ecommerce': [
+        { name: 'React.js', score: 91, color: '#00e5ff' },
+        { name: 'Node.js / Express', score: 85, color: '#00e5ff' },
+        { name: 'MongoDB', score: 78, color: '#7ecfff' },
+        { name: 'REST API Design', score: 88, color: '#00e5ff' },
+        { name: 'JWT Auth', score: 82, color: '#7ecfff' },
+        { name: 'State Management', score: 76, color: '#7ecfff' },
+        { name: 'CSS / Tailwind', score: 70, color: '#a0b8ff' },
+        { name: 'Git Practices', score: 90, color: '#00e5ff' },
+      ],
+      'fastapi-ml-service': [
+        { name: 'Python / FastAPI', score: 93, color: '#00e5ff' },
+        { name: 'ML Model Serving', score: 88, color: '#00e5ff' },
+        { name: 'Async Programming', score: 84, color: '#7ecfff' },
+        { name: 'API Design', score: 79, color: '#7ecfff' },
+        { name: 'Data Pipelines', score: 72, color: '#a0b8ff' },
+        { name: 'Docker / Deploy', score: 68, color: '#a0b8ff' },
+      ],
+      'blockchain-voting-dapp': [
+        { name: 'Solidity', score: 87, color: '#00e5ff' },
+        { name: 'Smart Contracts', score: 83, color: '#00e5ff' },
+        { name: 'Ethers.js', score: 79, color: '#7ecfff' },
+        { name: 'Web3 Security', score: 75, color: '#7ecfff' },
+        { name: 'React Frontend', score: 70, color: '#a0b8ff' },
+        { name: 'Hardhat Testing', score: 65, color: '#a0b8ff' },
+      ],
+    };
+    const repoScores = { 'mern-ecommerce': 87, 'fastapi-ml-service': 84, 'blockchain-voting-dapp': 80 };
+
+    function startAnalysis() {
+      const btn = document.getElementById('analyzeBtn');
+      btn.disabled = true; btn.textContent = 'ANALYZING...';
+      document.getElementById('analysisPanel').classList.add('visible');
+      document.getElementById('heatmapPanel').classList.remove('visible');
+      document.getElementById('repoName').textContent = selectedRepo;
+      ['s1', 's2', 's3', 's4', 's5'].forEach(id => {
+        document.getElementById(id).className = 'step-icon';
+        document.getElementById(id).textContent = '◌';
+      });
+      ['sl1', 'sl2', 'sl3', 'sl4', 'sl5'].forEach(id => {
+        document.getElementById(id).className = 'step-label pending';
+      });
+      const delays = [400, 1200, 2200, 3200, 4400];
+      for (let i = 1; i <= 5; i++) {
+        const idx = i;
+        setTimeout(() => {
+          document.getElementById('s' + idx).className = 'step-icon running';
+          document.getElementById('s' + idx).textContent = '↻';
+          document.getElementById('sl' + idx).className = 'step-label running';
+        }, delays[idx - 1]);
+        setTimeout(() => {
+          document.getElementById('s' + idx).className = 'step-icon done';
+          document.getElementById('s' + idx).textContent = '✓';
+          document.getElementById('sl' + idx).className = 'step-label done';
+          if (idx === 5) showResults();
+        }, delays[idx - 1] + 700);
+      }
+    }
+
+    function showResults() {
+      const skills = repoSkills[selectedRepo] || repoSkills['mern-ecommerce'];
+      const score = repoScores[selectedRepo] || 87;
+      document.getElementById('heatmapRepo').textContent = selectedRepo;
+      document.getElementById('heatmapPanel').classList.add('visible');
+      const grid = document.getElementById('skillsGrid');
+      grid.innerHTML = '';
+      skills.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'skill-bar-wrap';
+        div.innerHTML = `
+      <div class="skill-name"><span>${s.name}</span><span class="skill-score">${s.score}</span></div>
+      <div class="skill-track"><div class="skill-fill" id="sf${i}" style="width:0%;background:${s.color};"></div></div>`;
+        grid.appendChild(div);
+        setTimeout(() => { document.getElementById('sf' + i).style.width = s.score + '%'; }, 200 + i * 100);
+      });
+      // Score ring
+      const circumference = 326.7;
+      const offset = circumference - (score / 100) * circumference;
+      setTimeout(() => {
+        document.getElementById('scoreCircle').style.strokeDashoffset = offset;
+        document.getElementById('scoreBig').textContent = score;
+      }, 300);
+      // TX hash
+      const hash = '0x' + Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      document.getElementById('txHash').textContent = hash.substring(0, 20) + '...' + hash.substring(50);
+      document.getElementById('blockNum').textContent = 'Block #' + (22041337 + Math.floor(Math.random() * 100)).toLocaleString();
+      // Buttons
+      document.getElementById('analyzeBtn').disabled = false;
+      document.getElementById('analyzeBtn').textContent = 'ANALYZE REPO';
+      notify('✓ Skill Score anchored to blockchain', 'green');
+    }
+
+    // ---- TALENT DATA ----
+    const talents = [
+      {
+        name: 'RUBIKA A', initials: 'RA', role: 'Full-Stack Developer', score: 87,
+        skills: ['React', 'Node.js', 'MongoDB', 'Express', 'JWT'], top: ['React', 'Node.js'],
+        stack: 'mern', verified: '2026-03-02', hash: '0x3a7f9b...', grad: '135deg,#c0006e,#00e5ff'
+      },
+      {
+        name: 'NIRANJAN S', initials: 'NS', role: 'Backend / Python Developer', score: 84,
+        skills: ['FastAPI', 'Python', 'ML Serving', 'Docker', 'Async'], top: ['FastAPI', 'Python'],
+        stack: 'python', verified: '2026-03-01', hash: '0x91c4d2...', grad: '135deg,#005bff,#00e5ff'
+      },
+      {
+        name: 'JITENDAR S', initials: 'JS', role: 'Blockchain Developer', score: 80,
+        skills: ['Solidity', 'Ethers.js', 'Hardhat', 'React', 'Web3'], top: ['Solidity', 'Ethers.js'],
+        stack: 'solidity', verified: '2026-02-28', hash: '0x7e2a0f...', grad: '135deg,#ff6e00,#c0006e'
+      },
+      {
+        name: 'ANANYA K', initials: 'AK', role: 'Java Backend Engineer', score: 76,
+        skills: ['Spring Boot', 'Java', 'MySQL', 'REST', 'JUnit'], top: ['Spring Boot', 'Java'],
+        stack: 'java', verified: '2026-02-25', hash: '0xb3c1e8...', grad: '135deg,#008b00,#00e5ff'
+      },
+      {
+        name: 'DHARSHAN M', initials: 'DM', role: 'MERN Stack Developer', score: 73,
+        skills: ['React', 'MongoDB', 'Express', 'Node.js', 'Redux'], top: ['React', 'MongoDB'],
+        stack: 'mern', verified: '2026-02-22', hash: '0xf0a2c7...', grad: '135deg,#c0006e,#7700ff'
+      },
+      {
+        name: 'PRIYA V', initials: 'PV', role: 'ML Engineer', score: 89,
+        skills: ['Python', 'TensorFlow', 'FastAPI', 'Pandas', 'Docker'], top: ['Python', 'TensorFlow'],
+        stack: 'python', verified: '2026-03-03', hash: '0x22e9d1...', grad: '135deg,#00bfff,#00ff88'
+      },
+    ];
+    let displayedTalents = [...talents];
+
+    function renderTalent(t) {
+      return `<div class="talent-card" onclick="openModal(${talents.indexOf(t)})">
+    <div class="talent-top">
+      <div class="t-avatar" style="background:linear-gradient(${t.grad})">${t.initials}</div>
+      <div><div class="t-name">${t.name}</div><div class="t-role">${t.role}</div></div>
+      <div class="t-score-badge"><div class="t-score-num">${t.score}</div><div class="t-score-lbl">SKILL</div></div>
+    </div>
+    <div class="t-skills">
+      ${t.skills.map(s => `<div class="t-skill-tag${t.top.includes(s) ? ' top' : ''}">${s}</div>`).join('')}
+    </div>
+    <div class="t-chain-info">
+      <div class="chain-dot"></div>ON-CHAIN VERIFIED · ${t.verified} · ${t.hash}
+    </div>
+  </div>`;
+    }
+
+    function renderGrid() {
+      document.getElementById('talentGrid').innerHTML = displayedTalents.map(renderTalent).join('');
+      document.getElementById('talentCount').textContent = displayedTalents.length;
+    }
+
+    function filterTalent(val) {
+      displayedTalents = val === 'all' ? [...talents] : talents.filter(t => t.stack === val);
+      renderGrid();
+    }
+    function sortTalent(val) {
+      displayedTalents.sort((a, b) => val === 'score' ? b.score - a.score : b.verified.localeCompare(a.verified));
+      renderGrid();
+    }
+
+    function openModal(idx) {
+      const t = talents[idx];
+      document.getElementById('modalBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(${t.grad});display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;font-size:1.1rem;">${t.initials}</div>
+      <div>
+        <div style="font-family:'Orbitron',monospace;font-weight:700;font-size:1.1rem;">${t.name}</div>
+        <div style="font-size:0.85rem;color:var(--muted);">${t.role}</div>
+      </div>
+      <div class="badge verified" style="margin-left:auto;">✓ ON-CHAIN</div>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:24px;">
+      <div style="flex:1;background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:2.5rem;font-weight:900;color:var(--cyan);">${t.score}</div>
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Skill Score</div>
+      </div>
+      <div style="flex:1;background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:2.5rem;font-weight:900;color:var(--verified);">SBT</div>
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Token Minted</div>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;font-family:'Space Mono',monospace;">VERIFIED SKILLS</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${t.skills.map(s => `<div class="t-skill-tag${t.top.includes(s) ? ' top' : ''}" style="padding:6px 14px;font-size:0.75rem;">${s}</div>`).join('')}
+      </div>
+    </div>
+    <div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.2);padding:16px;">
+      <div style="font-size:0.7rem;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px;">VERIFICATION HASH</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--verified);word-break:break-all;">${t.hash}...abc123def456</div>
+      <div style="font-size:0.7rem;color:var(--muted);font-family:'Space Mono',monospace;margin-top:8px;">Verified: ${t.verified} · Ethereum Sepolia</div>
+    </div>
+    <button class="btn-primary" style="width:100%;margin-top:20px;padding:14px;" onclick="notify('Contact request sent to ${t.name}!','cyan')">CONTACT CANDIDATE</button>
+  `;
+      document.getElementById('talentModal').classList.add('open');
+    }
+    function closeModal(e) {
+      if (e.target === document.getElementById('talentModal'))
+        document.getElementById('talentModal').classList.remove('open');
+    }
+
+    // ---- VERIFY ----
+    function doVerify() {
+      const h = document.getElementById('verifyHash').value.trim();
+      if (!h) { notify('Please enter a verification hash', 'cyan'); return; }
+      document.getElementById('verifyResult').style.display = 'none';
+      setTimeout(() => {
+        document.getElementById('verifyResult').classList.add('visible');
+        document.getElementById('verifyResult').style.display = 'block';
+        notify('✓ Verification complete — Authentic', 'green');
+      }, 800);
+    }
+
+    // ---- NOTIFY ----
+    let notifTimer;
+    function notify(msg, type = 'cyan') {
+      const el = document.getElementById('notif');
+      el.textContent = msg; el.className = 'notif ' + type + ' show';
+      clearTimeout(notifTimer);
+      notifTimer = setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ---- INIT ----
+    renderGrid();
+  </script>
+</body>
+
+</html>
