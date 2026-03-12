@@ -26,7 +26,7 @@ Recruiters can verify any candidate's skills **instantly**, with zero trust requ
 
 ## 🎬 Demo
 
-> 📹 [Watch the Demo Video](#) *(link to be added)*
+> 📹 [Watch the Demo Video](https://www.loom.com/share/40ba04c593014591b2fe11d286403f76) 
 > 🌐 [Live Prototype](./frontend/prototype/skillchain_prototype.html) — open in browser
 
 ---
